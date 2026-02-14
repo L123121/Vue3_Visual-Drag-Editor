@@ -10,7 +10,7 @@
                         <template #label>
                             <span class="tab-label">
                                 <el-icon><Box /></el-icon>
-                                <span>组件列表</span>
+                                <span>组件</span>
                             </span>
                         </template>
                         <ComponentList />
