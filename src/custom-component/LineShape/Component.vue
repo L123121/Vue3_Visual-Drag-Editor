@@ -1,28 +1,25 @@
 <template>
-    <div class="line-shape"></div>
+  <div class="line-shape"></div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useOnEvent } from '../common/useOnEvent'
+import type { ComponentData, LinkageConfig } from '@/types'
 
-const props = defineProps({
-    element: {
-        type: Object,
-        default: () => {},
-    },
-    linkage: {
-        type: Object,
-        default: () => {},
-    },
-})
+interface Props {
+  element: ComponentData
+  linkage: LinkageConfig
+}
+
+const props = defineProps<Props>()
 
 useOnEvent(props)
 </script>
 
 <style lang="scss" scoped>
 .line-shape {
-    width: 100%;
-    height: 100%;
-    overflow: auto;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
 }
 </style>

@@ -57,7 +57,7 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
@@ -70,13 +70,13 @@ const { curComponent } = storeToRefs(store)
 const isShowEvent = ref(false)
 const eventActiveName = ref('redirect')
 
-function addEvent(event, param) {
-    isShowEvent.value = false
-    store.addEvent({ event, param })
+function addEvent(event: string, param: string): void {
+  isShowEvent.value = false
+  store.addEvent({ event, param })
 }
 
-function removeEvent(event) {
-    store.removeEvent(event)
+function removeEvent(event: string): void {
+  store.removeEvent(event)
 }
 </script>
 

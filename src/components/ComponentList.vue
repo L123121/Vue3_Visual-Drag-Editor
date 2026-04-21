@@ -16,40 +16,41 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import componentList from '@/custom-component/component-list'
-import { 
-    DataAnalysis, 
-    Edit, 
-    Mouse, 
-    Picture as PictureIcon, 
-    FullScreen, 
-    Minus, 
-    CircleCheck, 
-    Star, 
-    CaretTop, 
-    Grid 
+import type { Component } from 'vue'
+import {
+  DataAnalysis,
+  Edit,
+  Mouse,
+  Picture as PictureIcon,
+  FullScreen,
+  Minus,
+  CircleCheck,
+  Star,
+  CaretTop,
+  Grid
 } from '@element-plus/icons-vue'
 
-const iconMap = {
-    'wenben': Edit,
-    'button': Mouse,
-    'tupian': PictureIcon,
-    'juxing': FullScreen,
-    'zhixian': Minus,
-    '24gl-circle': CircleCheck,
-    'kongxinputao': Star,
-    'xingzhuang-sanjiaoxing': CaretTop,
-    'biaoge': Grid,
-    'DataAnalysis': DataAnalysis,
+const iconMap: Record<string, Component> = {
+  'wenben': Edit,
+  'button': Mouse,
+  'tupian': PictureIcon,
+  'juxing': FullScreen,
+  'zhixian': Minus,
+  '24gl-circle': CircleCheck,
+  'kongxinputao': Star,
+  'xingzhuang-sanjiaoxing': CaretTop,
+  'biaoge': Grid,
+  'DataAnalysis': DataAnalysis,
 }
 
-function handleDragStart(e) {
-    // e.target 可能是子元素（icon/span），需要向上查找带 data-index 的 .list 元素
-    const target = e.target.closest('.list')
-    if (target) {
-        e.dataTransfer.setData('index', target.dataset.index)
-    }
+function handleDragStart(e: DragEvent): void {
+  const target = e.target as HTMLElement
+  const listEl = target.closest('.list') as HTMLElement
+  if (listEl && e.dataTransfer) {
+    e.dataTransfer.setData('index', listEl.dataset.index || '')
+  }
 }
 </script>
 

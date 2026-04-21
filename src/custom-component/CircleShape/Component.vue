@@ -1,36 +1,29 @@
 <template>
-    <div class="circle-shape">
-        <VText :prop-value="element.propValue" :element="element" />
-    </div>
+  <div class="circle-shape">
+    <VText :prop-value="element.propValue" :element="element" />
+  </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useOnEvent } from '../common/useOnEvent'
+import type { ComponentData, LinkageConfig } from '@/types'
 
-const props = defineProps({
-    propValue: {
-        type: String,
-        required: true,
-        default: '',
-    },
-    element: {
-        type: Object,
-        default: () => {},
-    },
-    linkage: {
-        type: Object,
-        default: () => {},
-    },
-})
+interface Props {
+  propValue: string
+  element: ComponentData
+  linkage: LinkageConfig
+}
+
+const props = defineProps<Props>()
 
 useOnEvent(props)
 </script>
 
 <style lang="scss" scoped>
 .circle-shape {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    overflow: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: auto;
 }
 </style>

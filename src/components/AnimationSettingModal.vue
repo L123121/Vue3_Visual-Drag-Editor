@@ -33,55 +33,72 @@
     </el-dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import eventBus from '@/utils/eventBus'
 
+interface AnimationConfig {
+  label: string
+  animationTime: number
+  isLoop: boolean
+  value: string
+}
+
 const props = defineProps({
-    curIndex: {
-        type: Number,
-        default: 0,
-    },
+  curIndex: {
+    type: Number,
+    default: 0,
+  },
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
 
 const store = useStore()
 const { curComponent } = storeToRefs(store)
 
 const centerDialogVisible = ref(true)
-const config = reactive({})
+const config = reactive<AnimationConfig>({
+  label: '',
+  animationTime: 1,
+  isLoop: false,
+  value: '',
+})
 
-const isDisabled = computed(() => {
-    return curComponent.value.animations.length > 1
+const isDisabled = computed((): boolean => {
+  return curComponent.value.animations.length > 1
 })
 
 // Initialize config
-const { label, animationTime, isLoop = false, value } = curComponent.value.animations[props.curIndex] || {}
-Object.assign(config, {
+const animation = curComponent.value.animations[props.curIndex]
+if (animation) {
+  const { label, animationTime, isLoop = false, value } = animation
+  Object.assign(config, {
     animationTime,
     label,
     isLoop,
     value,
-})
-
-function handleCloseModal() {
-    emit('close')
+  })
 }
 
-function handleSaveSetting() {
-    const { isLoop } = config
-    store.alterAnimation({
-        index: props.curIndex,
-        data: { 
-            animationTime: config.animationTime,
-            isLoop,
-        },
-    })
-    eventBus.emit('stopAnimation')
-    handleCloseModal()
+function handleCloseModal(): void {
+  emit('close')
+}
+
+function handleSaveSetting(): void {
+  const { isLoop } = config
+  store.alterAnimation({
+    index: props.curIndex,
+    data: {
+      animationTime: config.animationTime,
+      isLoop,
+    },
+  })
+  eventBus.emit('stopAnimation')
+  handleCloseModal()
 }
 </script>
 

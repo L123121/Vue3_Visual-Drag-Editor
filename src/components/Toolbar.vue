@@ -45,6 +45,10 @@
                 <el-button :disabled="!curComponent || !curComponent.isLock" @click="unlock" :icon="Unlock">解锁</el-button>
             </el-button-group>
 
+            <el-button-group class="ml-10">
+                <el-button @click="showVersionHistory" :icon="Clock">版本历史</el-button>
+            </el-button-group>
+
             <div class="canvas-config ml-10">
                 <span>画布大小</span>
                 <input v-model="canvasStyleData.width" />
@@ -69,6 +73,17 @@
         <!-- 预览 -->
         <Preview v-if="isShowPreview" :is-screenshot="isScreenshot" @close="handlePreviewChange" />
         <AceEditor v-if="isShowAceEditor" @closeEditor="closeEditor" />
+
+        <!-- 版本历史面板 -->
+        <el-drawer
+            v-model="isShowVersionHistory"
+            title="版本历史"
+            direction="rtl"
+            size="400px"
+            :with-header="false"
+        >
+            <VersionHistory />
+        </el-drawer>
 
         <el-dialog
             v-model="isShowDialog"
@@ -103,36 +118,51 @@
     </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import generateID from '@/utils/generateID'
 import Preview from '@/components/Editor/Preview.vue'
 import AceEditor from '@/components/Editor/AceEditor.vue'
+import VersionHistory from '@/components/VersionHistory.vue'
 import { commonStyle, commonAttr } from '@/custom-component/component-list'
 import eventBus from '@/utils/eventBus'
 import { $ } from '@/utils/utils'
 import changeComponentsSizeWithScale, { changeComponentSizeWithScale } from '@/utils/changeComponentsSizeWithScale'
-import { ElMessage } from 'element-plus'
-import { 
-    Sunny, Moon, Edit, Upload, Download, RefreshLeft, RefreshRight, 
-    Picture, View, FolderChecked, Delete, Camera, Connection, 
-    Remove, Lock, Unlock 
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+    Sunny, Moon, Edit, Upload, Download, RefreshLeft, RefreshRight,
+    Picture, View, FolderChecked, Delete, Camera, Connection,
+    Remove, Lock, Unlock, Clock
 } from '@element-plus/icons-vue'
+import type { ComponentData, CanvasStyleData, ComponentStyle } from '@/types'
+import { validateAuto } from '@/utils/validation'
+
+// 导出数据格式
+interface ExportData {
+    version: string
+    timestamp: number
+    canvasStyle: CanvasStyleData
+    componentData: ComponentData[]
+}
 
 const store = useStore()
 const { componentData, canvasStyleData, areaData, curComponent, isDarkMode } = storeToRefs(store)
 
 const isShowPreview = ref(false)
 const isShowAceEditor = ref(false)
-const timer = ref(null)
+const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const isScreenshot = ref(false)
 const scale = ref(100)
 const switchValue = ref(false)
 const isShowDialog = ref(false)
 const jsonData = ref('')
 const isExport = ref(false)
+const isShowVersionHistory = ref(false)
+
+// 当前版本号，用于数据兼容性检查
+const DATA_VERSION = '1.0.0'
 
 onMounted(() => {
     eventBus.on('preview', preview)
@@ -140,21 +170,25 @@ onMounted(() => {
     eventBus.on('clearCanvas', clearCanvas)
 
     scale.value = canvasStyleData.value.scale
-    const savedMode = JSON.parse(localStorage.getItem('isDarkMode'))
+    const savedMode = localStorage.getItem('isDarkMode')
     if (savedMode) {
-        handleToggleDarkMode(savedMode)
+        handleToggleDarkMode(JSON.parse(savedMode))
     }
 })
 
-function handleToggleDarkMode(value) {
-    if (value !== null) {
-        store.toggleDarkMode(value)
-        switchValue.value = value
-    }
+onUnmounted(() => {
+    eventBus.off('preview', preview)
+    eventBus.off('save', save)
+    eventBus.off('clearCanvas', clearCanvas)
+})
+
+function handleToggleDarkMode(value: boolean): void {
+    store.toggleDarkMode(value)
+    switchValue.value = value
 }
 
-function handleScaleChange() {
-    clearTimeout(timer.value)
+function handleScaleChange(): void {
+    if (timer.value) clearTimeout(timer.value)
     store.setLastScale(scale.value)
     timer.value = setTimeout(() => {
         // 画布比例设一个最小值，不能为 0
@@ -181,13 +215,11 @@ function unlock() {
 }
 
 function compose() {
-    store.compose()
-    store.recordSnapshot()
+    store.composeWithCommand()
 }
 
 function decompose() {
-    store.decompose()
-    store.recordSnapshot()
+    store.decomposeWithCommand()
 }
 
 function undo() {
@@ -198,8 +230,11 @@ function redo() {
     store.redo()
 }
 
-function handleFileChange(e) {
-    const file = e.target.files[0]
+function handleFileChange(e: Event): void {
+    const target = e.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (!file) return
+
     if (!file.type.includes('image')) {
         ElMessage.error('只能插入图片')
         return
@@ -207,10 +242,10 @@ function handleFileChange(e) {
 
     const reader = new FileReader()
     reader.onload = (res) => {
-        const fileResult = res.target.result
+        const fileResult = res.target?.result as string
         const img = new Image()
         img.onload = () => {
-            const component = {
+            const component: ComponentData = {
                 ...commonAttr,
                 id: generateID(),
                 component: 'Picture',
@@ -229,18 +264,20 @@ function handleFileChange(e) {
                     left: 0,
                     width: img.width,
                     height: img.height,
-                },
+                } as ComponentStyle,
             }
 
             // 根据画面比例修改组件样式比例 https://github.com/woai3c/visual-drag-demo/issues/91
             changeComponentSizeWithScale(component)
 
-            store.addComponent({ component })
-            store.recordSnapshot()
+            store.addComponentWithCommand(component)
 
             // 修复重复上传同一文件，@change 不触发的问题
-            $('#input').setAttribute('type', 'text')
-            $('#input').setAttribute('type', 'file')
+            const input = $('#input') as HTMLInputElement
+            if (input) {
+                input.type = 'text'
+                input.type = 'file'
+            }
         }
 
         img.src = fileResult
@@ -249,62 +286,134 @@ function handleFileChange(e) {
     reader.readAsDataURL(file)
 }
 
-function preview(screenshot) {
+function preview(screenshot: boolean): void {
     isScreenshot.value = screenshot
     isShowPreview.value = true
     store.setEditMode('preview')
 }
 
-function save() {
+function save(): void {
     localStorage.setItem('canvasData', JSON.stringify(componentData.value))
     localStorage.setItem('canvasStyle', JSON.stringify(canvasStyleData.value))
     ElMessage.success('保存成功')
 }
 
-function clearCanvas() {
-    store.setCurComponent({ component: null, index: null })
-    store.setComponentData([])
-    store.recordSnapshot()
+function clearCanvas(): void {
+    ElMessageBox.confirm('确定要清空画布吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+    }).then(() => {
+        store.clearCanvasWithCommand()
+        ElMessage.success('画布已清空')
+    }).catch(() => {
+        // 用户取消
+    })
 }
 
-function handlePreviewChange() {
+function handlePreviewChange(): void {
     isShowPreview.value = false
     store.setEditMode('edit')
 }
 
-function onImportJSON() {
+function onImportJSON(): void {
     jsonData.value = ''
     isExport.value = false
     isShowDialog.value = true
 }
 
-function processJSON() {
+/**
+ * 为组件生成新的 ID（导入时避免 ID 冲突）
+ */
+function regenerateComponentIds(components: ComponentData[]): ComponentData[] {
+    return components.map(comp => ({
+        ...comp,
+        id: generateID(),
+        // 如果是组合组件，递归处理子组件
+        ...(comp.component === 'Group' && Array.isArray(comp.propValue)
+            ? { propValue: regenerateComponentIds(comp.propValue as ComponentData[]) }
+            : {})
+    }))
+}
+
+function processJSON(): void {
     try {
         const data = JSON.parse(jsonData.value)
-        if (!Array.isArray(data)) {
-            ElMessage.error('数据格式错误，组件数据必须是一个数组')
-            return
-        }
 
         if (isExport.value) {
-            downloadFileUtil(jsonData.value, 'application/json', 'data.json')
+            // 导出：下载文件
+            downloadFileUtil(jsonData.value, 'application/json', `lowcode-project-${Date.now()}.json`)
+            ElMessage.success('导出成功')
         } else {
-            store.setComponentData(data)
+            // 导入：使用 Zod 校验
+            const result = validateAuto(data)
+            if (!result.success) {
+                ElMessage.error(`数据校验失败: ${result.errors?.join(', ')}`)
+                return
+            }
+
+            const { componentData: components, canvasStyle } = result.data!
+
+            // 为组件生成新 ID，避免冲突
+            const newComponents = regenerateComponentIds(components)
+
+            // 如果当前画布有内容，询问是否覆盖
+            if (componentData.value.length > 0) {
+                ElMessageBox.confirm(
+                    '当前画布有内容，导入将覆盖现有内容，是否继续？',
+                    '导入确认',
+                    {
+                        confirmButtonText: '覆盖',
+                        cancelButtonText: '取消',
+                        type: 'warning',
+                    }
+                ).then(() => {
+                    applyImport(newComponents, canvasStyle ?? null)
+                }).catch(() => {
+                    // 用户取消
+                })
+            } else {
+                applyImport(newComponents, canvasStyle ?? null)
+            }
         }
 
         isShowDialog.value = false
     } catch (error) {
         ElMessage.error('数据格式错误，请传入合法的 JSON 格式数据')
+        console.error('Import error:', error)
     }
 }
 
-function onExportJSON() {
-    isShowDialog.value = true
-    isExport.value = true
-    jsonData.value = JSON.stringify(componentData.value, null, 4)
+/**
+ * 应用导入的数据
+ */
+function applyImport(components: ComponentData[], canvasStyle: CanvasStyleData | null): void {
+    store.importDataWithCommand(components, canvasStyle ?? undefined)
+    if (canvasStyle) {
+        scale.value = canvasStyle.scale
+    }
+    ElMessage.success(`导入成功，共 ${components.length} 个组件`)
 }
 
-function downloadFileUtil(data, type, fileName = '') {
+function onExportJSON(): void {
+    isShowDialog.value = true
+    isExport.value = true
+
+    // 导出完整的项目数据（包含画布样式）
+    const exportData: ExportData = {
+        version: DATA_VERSION,
+        timestamp: Date.now(),
+        canvasStyle: canvasStyleData.value,
+        componentData: componentData.value,
+    }
+
+    jsonData.value = JSON.stringify(exportData, null, 2)
+}
+
+/**
+ * 下载文件工具函数
+ */
+function downloadFileUtil(data: string, type: string, fileName: string): void {
     const url = window.URL.createObjectURL(new Blob([data], { type }))
     const link = document.createElement('a')
 
@@ -318,15 +427,37 @@ function downloadFileUtil(data, type, fileName = '') {
     window.URL.revokeObjectURL(url)
 }
 
-function beforeUpload(e) {
-    // 通过json文件导入
+/**
+ * 上传文件前的处理
+ */
+function beforeUpload(file: File): boolean {
+    // 检查文件类型
+    if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+        ElMessage.error('只支持 JSON 格式文件')
+        return false
+    }
+
+    // 检查文件大小（限制 10MB）
+    const maxSize = 10 * 1024 * 1024
+    if (file.size > maxSize) {
+        ElMessage.error('文件大小不能超过 10MB')
+        return false
+    }
+
     const reader = new FileReader()
-    reader.readAsText(e)
+    reader.readAsText(file)
     reader.onload = function () {
-        jsonData.value = this.result
+        jsonData.value = this.result as string
+    }
+    reader.onerror = function () {
+        ElMessage.error('文件读取失败')
     }
 
     return false
+}
+
+function showVersionHistory(): void {
+    isShowVersionHistory.value = true
 }
 </script>
 

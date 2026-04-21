@@ -26,40 +26,39 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getStyle, getSVGStyle } from '@/utils/style'
 import runAnimation from '@/utils/runAnimation'
 import { events } from '@/utils/events'
 import eventBus from '@/utils/eventBus'
+import type { ComponentData } from '@/types'
 
-const props = defineProps({
-    config: {
-        type: Object,
-        required: true,
-        default: () => ({}),
-    },
-})
+const props = defineProps<{
+  config: ComponentData
+}>()
 
-const componentRef = ref(null)
+const componentRef = ref<{ $el: HTMLElement } | null>(null)
 
 onMounted(() => {
+  if (componentRef.value?.$el) {
     runAnimation(componentRef.value.$el, props.config.animations)
+  }
 })
 
-function onClick() {
-    const eventMap = props.config.events
-    Object.keys(eventMap).forEach(key => {
-        if (events[key]) {
-            events[key](eventMap[key])
-        }
-    })
+function onClick(): void {
+  const eventMap = props.config.events
+  Object.keys(eventMap).forEach(key => {
+    if (events[key]) {
+      events[key](eventMap[key])
+    }
+  })
 
-    eventBus.emit('v-click', props.config.id)
+  eventBus.emit('v-click', props.config.id)
 }
 
-function onMouseEnter() {
-    eventBus.emit('v-hover', props.config.id)
+function onMouseEnter(): void {
+  eventBus.emit('v-hover', props.config.id)
 }
 </script>
 

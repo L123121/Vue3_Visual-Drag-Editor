@@ -1,52 +1,40 @@
 <template>
-    <v-chart 
-        ref="chart" 
-        class="chart" 
-        :option="propValue.option"
-        autoresize
-    />
+  <v-chart ref="chart" class="chart" :option="propValue.option" autoresize />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { ScatterChart, BarChart, LineChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import { useOnEvent } from '../common/useOnEvent'
+import type { ComponentData, ChartPropValue, LinkageConfig } from '@/types'
 
 use([
-    CanvasRenderer,
-    ScatterChart,
-    TitleComponent,
-    TooltipComponent,
-    LegendComponent,
-    GridComponent,
-    BarChart,
-    LineChart,
+  CanvasRenderer,
+  ScatterChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  BarChart,
+  LineChart,
 ])
 
-const props = defineProps({
-    propValue: {
-        type: Object,
-        require: true,
-        default: () => {},
-    },
-    element: {
-        type: Object,
-        default: () => {},
-    },
-    linkage: {
-        type: Object,
-        default: () => {},
-    },
-})
+interface Props {
+  propValue: ChartPropValue
+  element: ComponentData
+  linkage: LinkageConfig
+}
+
+const props = defineProps<Props>()
 
 useOnEvent(props)
 </script>
 
 <style scoped>
 .chart {
-    height: 400px;
+  height: 400px;
 }
 </style>

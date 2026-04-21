@@ -1,35 +1,28 @@
 <template>
-    <div
-        :style="{
-            left: start.x + 'px',
-            top: start.y + 'px',
-            width: width + 'px',
-            height: height + 'px',
-        }"
-        class="area"
-    ></div>
+  <div
+    :style="{
+      left: start.x + 'px',
+      top: start.y + 'px',
+      width: width + 'px',
+      height: height + 'px',
+    }"
+    class="area"
+  ></div>
 </template>
 
-<script setup>
-const props = defineProps({
-    start: {
-        type: Object,
-        default: () => ({}),
-    },
-    width: {
-        type: Number,
-        default: 0,
-    },
-    height: {
-        type: Number,
-        default: 0,
-    },
-})
+<script setup lang="ts">
+interface Props {
+  start: { x: number; y: number }
+  width: number
+  height: number
+}
+
+defineProps<Props>()
 </script>
 
 <style lang="scss" scoped>
 .area {
-    border: 1px solid #70c0ff;
-    position: absolute;
+  border: 1px solid #70c0ff;
+  position: absolute;
 }
 </style>

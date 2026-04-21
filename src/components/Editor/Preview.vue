@@ -21,51 +21,58 @@
     </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { getStyle, getCanvasStyle } from '@/utils/style'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { getCanvasStyle } from '@/utils/style'
 import ComponentWrapper from './ComponentWrapper.vue'
 import { changeStyleWithScale } from '@/utils/translate'
 import { toPng } from 'html-to-image'
 import { deepCopy } from '@/utils/utils'
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
+import type { ComponentData } from '@/types'
 
 const props = defineProps({
-    isScreenshot: {
-        type: Boolean,
-        default: false,
-    },
+  isScreenshot: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
 
 const store = useStore()
 const { componentData, canvasStyleData } = storeToRefs(store)
 
-const copyData = ref([])
-const container = ref(null)
+const copyData = ref<ComponentData[]>([])
+const container = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-    copyData.value = deepCopy(componentData.value)
+  copyData.value = deepCopy(componentData.value)
 })
 
-function close() {
-    emit('close')
+function close(): void {
+  emit('close')
 }
 
-function htmlToImage() {
-    toPng(container.value.querySelector('.canvas'))
-        .then(dataUrl => {
-            const a = document.createElement('a')
-            a.setAttribute('download', 'screenshot')
-            a.href = dataUrl
-            a.click()
-        })
-        .catch(error => {
-            console.error('oops, something went wrong!', error)
-        })
-        .finally(close)
+function htmlToImage(): void {
+  if (!container.value) return
+  const canvas = container.value.querySelector('.canvas') as HTMLElement
+  if (!canvas) return
+
+  toPng(canvas)
+    .then(dataUrl => {
+      const a = document.createElement('a')
+      a.setAttribute('download', 'screenshot')
+      a.href = dataUrl
+      a.click()
+    })
+    .catch(error => {
+      console.error('oops, something went wrong!', error)
+    })
+    .finally(close)
 }
 </script>
 

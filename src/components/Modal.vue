@@ -6,22 +6,24 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 const props = defineProps({
-    modelValue: {
-        type: Boolean,
-        default: false,
-    }
+  modelValue: {
+    type: Boolean,
+    default: false,
+  }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: boolean): void
+}>()
 
-function hide() {
-    emit('update:modelValue', false)
+function hide(): void {
+  emit('update:modelValue', false)
 }
 
-function stopPropagation(e) {
-    e.stopPropagation()
+function stopPropagation(e: Event): void {
+  e.stopPropagation()
 }
 </script>
 

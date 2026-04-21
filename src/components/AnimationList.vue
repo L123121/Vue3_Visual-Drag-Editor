@@ -63,7 +63,7 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import Modal from '@/components/Modal.vue'
 import eventBus from '@/utils/eventBus'
@@ -73,6 +73,12 @@ import { storeToRefs } from 'pinia'
 import runAnimation from '@/utils/runAnimation'
 import AnimationSettingModal from './AnimationSettingModal.vue'
 import { Setting } from '@element-plus/icons-vue'
+import type { Animation } from '@/types'
+
+interface AnimationItem {
+  label: string
+  value: string
+}
 
 const store = useStore()
 const { curComponent } = storeToRefs(store)
@@ -83,37 +89,29 @@ const animationActiveName = ref('进入')
 const isShowAnimationSetting = ref(false)
 const curIndex = ref(0)
 
-function addAnimation(animate) {
-    store.addAnimation(animate)
-    isShowAnimation.value = false
+function addAnimation(animate: AnimationItem): void {
+  store.addAnimation(animate)
+  isShowAnimation.value = false
 }
 
-function previewAnimate() {
-    eventBus.emit('runAnimation')
+function previewAnimate(): void {
+  eventBus.emit('runAnimation')
 }
 
-function removeAnimation(index) {
-    store.removeAnimation(index)
-    if (!curComponent.value.animations.length) { // 清空动画数据，停止运动
-        eventBus.emit('stopAnimation')
-    }
+function removeAnimation(index: number): void {
+  store.removeAnimation(index)
+  if (!curComponent.value.animations.length) { // 清空动画数据，停止运动
+    eventBus.emit('stopAnimation')
+  }
 }
 
-function handleAnimationSetting(index) {
-    isShowAnimationSetting.value = true
-    curIndex.value = index
+function handleAnimationSetting(index: number): void {
+  isShowAnimationSetting.value = true
+  curIndex.value = index
 }
 
-function runAnimationFn(animate) {
-    hoverPreviewAnimate.value = animate.value
-    // In Vue 3, we can just use class binding instead of direct DOM manipulation with ref
-    // The original code used refs to run animation on the list item itself
-    // <div :ref="animate.value" ...>
-    // runAnimation(this.$refs[animate.value][0], [animate])
-    
-    // Here I updated the template to bind class directly:
-    // :class="[hoverPreviewAnimate === animate.value && animate.value + ' animated']"
-    // This simplifies things.
+function runAnimationFn(animate: AnimationItem): void {
+  hoverPreviewAnimate.value = animate.value
 }
 </script>
 

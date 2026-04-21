@@ -82,9 +82,11 @@ function setFontSize() {
         height: (proportion * initialStyle.height).toFixed(4),
         padding: (proportion * initialStyle.padding).toFixed(4),
     }
-    curComponent.value.style = { ...curComponent.value.style, ...updatedStyle }
-    store.setShapeStyle(curComponent.value.style)
-    store.recordSnapshot()
+    const newStyle = { ...curComponent.value.style, ...updatedStyle }
+    curComponent.value.style = newStyle
+    store.setShapeStyle(newStyle)
+    // 使用样式变更命令
+    store.resizeComponent(curComponent.value.id, initialStyle, newStyle)
 }
 </script>
 

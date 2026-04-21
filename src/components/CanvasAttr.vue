@@ -10,22 +10,22 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 
 const store = useStore()
 const { canvasStyleData } = storeToRefs(store)
 
-const options = {
-    color: '颜色',
-    opacity: '不透明度',
-    backgroundColor: '背景色',
-    fontSize: '字体大小',
+const options: Record<string, string> = {
+  color: '颜色',
+  opacity: '不透明度',
+  backgroundColor: '背景色',
+  fontSize: '字体大小',
 }
 
-function isIncludesColor(str) {
-    return str.toLowerCase().includes('color')
+function isIncludesColor(str: string): boolean {
+  return str.toLowerCase().includes('color')
 }
 </script>
 

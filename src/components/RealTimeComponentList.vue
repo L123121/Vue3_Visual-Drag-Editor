@@ -23,52 +23,59 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { DataAnalysis, ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
+import type { ComponentData } from '@/types'
 
 const store = useStore()
 const { componentData, curComponentIndex, rightList } = storeToRefs(store)
 
-function getComponent(index) {
-    return componentData.value[componentData.value.length - 1 - index]
+function getComponent(index: number): ComponentData {
+  return componentData.value[componentData.value.length - 1 - index]
 }
 
-function transformIndex(index) {
-    return componentData.value.length - 1 - index
+function transformIndex(index: number): number {
+  return componentData.value.length - 1 - index
 }
 
-function onClick(index) {
-    if (!rightList.value) {
-        store.isShowRightList()
+function onClick(index: number): void {
+  if (!rightList.value) {
+    store.isShowRightList()
+  }
+  setCurComponent(index)
+}
+
+function deleteComponent(index: number): void {
+  setTimeout(() => {
+    const component = componentData.value[index]
+    if (component) {
+      store.deleteComponentWithCommand(component.id, index)
     }
-    setCurComponent(index)
+  })
 }
 
-function deleteComponent() {
-    setTimeout(() => {
-        store.deleteComponent()
-        store.recordSnapshot()
-    })
+function upComponent(index: number): void {
+  setTimeout(() => {
+    const component = componentData.value[index]
+    if (component) {
+      store.layerOperation(component.id, 'up')
+    }
+  })
 }
 
-function upComponent() {
-    setTimeout(() => {
-        store.upComponent()
-        store.recordSnapshot()
-    })
+function downComponent(index: number): void {
+  setTimeout(() => {
+    const component = componentData.value[index]
+    if (component) {
+      store.layerOperation(component.id, 'down')
+    }
+  })
 }
 
-function downComponent() {
-    setTimeout(() => {
-        store.downComponent()
-        store.recordSnapshot()
-    })
-}
-
-function setCurComponent(index) {
-    store.setCurComponent({ component: componentData.value[index], index })
+function setCurComponent(index: number): void {
+  store.setCurComponent({ component: componentData.value[index], index })
 }
 </script>
 
